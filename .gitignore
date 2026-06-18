@@ -1,0 +1,16 @@
+node_modules/
+*.db
+*.db-shm
+*.db-wal
+screenshots/
+dist/
+build/
+*.log
+.env
+agent/build/
+agent/dist/
+agent/config.json
+__pycache__/
+*.pyc
+*.pem
+*.ppk
