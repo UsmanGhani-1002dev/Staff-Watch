@@ -19,13 +19,25 @@ import requests
 # ── CONFIG ────────────────────────────────────────────────────────────────────
 CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
 
+def normalize_server_url(url):
+    """Clean up the server URL so we never double the /api path.
+    The agent always appends /api/agent/... itself, so the stored base
+    must not end in a slash or /api (a common copy-paste mistake)."""
+    url = (url or "").strip().rstrip("/")
+    if url.lower().endswith("/api"):
+        url = url[:-4].rstrip("/")
+    return url
+
 def load_config():
     if not os.path.exists(CONFIG_FILE):
         setup_gui()
         if not os.path.exists(CONFIG_FILE):
             sys.exit(1)
     with open(CONFIG_FILE, "r") as f:
-        return json.load(f)
+        config = json.load(f)
+    # Repair existing configs that were saved with a trailing /api
+    config["server_url"] = normalize_server_url(config.get("server_url", ""))
+    return config
 
 # ── SCREENSHOT ─────────────────────────────────────────────────────────────────
 def take_screenshot():
@@ -218,7 +230,7 @@ def setup_gui():
     
     tk.Label(root, text="Server URL:", fg="#8b8bab", bg="#1a1a2e", font=("Segoe UI", 10)).pack()
     url_entry = tk.Entry(root, width=40, bg="#0f0f18", fg="#ffffff", insertbackground="#ffffff", font=("Segoe UI", 10))
-    url_entry.insert(0, "http://localhost:3000") # Change to production URL later
+    url_entry.insert(0, "http://54.167.19.249") # Production server
     url_entry.pack(pady=5)
     
     tk.Label(root, text="Machine Token:", fg="#8b8bab", bg="#1a1a2e", font=("Segoe UI", 10)).pack(pady=(10, 0))
@@ -233,7 +245,7 @@ def setup_gui():
             return
             
         config = {
-            "server_url": url.rstrip("/"),
+            "server_url": normalize_server_url(url),
             "machine_token": token,
             "installed_at": datetime.utcnow().isoformat()
         }
