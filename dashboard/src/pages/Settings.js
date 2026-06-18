@@ -1,5 +1,5 @@
 // src/pages/Settings.js
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { Save } from "lucide-react";
 
@@ -12,6 +12,24 @@ export default function Settings() {
   });
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Load the org's currently saved settings so the form reflects reality,
+  // not hardcoded defaults.
+  useEffect(() => {
+    authFetch(`/api/organisations/`)
+      .then(r => r.ok ? r.json() : [])
+      .then(list => {
+        const org = Array.isArray(list) ? (list.find(o => o.id === user.org_id) || list[0]) : null;
+        if (org) {
+          setForm({
+            screenshot_interval_min: org.screenshot_interval_min,
+            screenshot_interval_max: org.screenshot_interval_max,
+            screenshot_retention_days: org.screenshot_retention_days
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
   const [pwForm, setPwForm] = useState({ current: "", newPw: "", confirm: "" });
   const [pwError, setPwError] = useState("");
   const [pwSuccess, setPwSuccess] = useState(false);

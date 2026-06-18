@@ -42,17 +42,23 @@ router.patch("/:id", requireAuth(["superadmin", "client-admin"]), async (req, re
   try {
     const db = await getDb();
     if (req.user.role === "client-admin" && req.params.id !== req.user.org_id) return res.status(403).json({ error: "Forbidden" });
+    const isSuperadmin = req.user.role === "superadmin";
     const { name, plan, seat_limit, screenshot_retention_days, screenshot_interval_min, screenshot_interval_max, active } = req.body;
+    // Plan, seat limit and active status are billing/lifecycle controls — superadmin only.
+    // A client-admin must not be able to raise their own seat limit or change plan.
+    if (!isSuperadmin && (plan !== undefined || seat_limit !== undefined || active !== undefined)) {
+      return res.status(403).json({ error: "Only a superadmin can change plan, seat limit, or active status" });
+    }
     // Build dynamic update
     const fields = [];
     const vals = [];
     if (name !== undefined) { fields.push("name = ?"); vals.push(name); }
-    if (plan !== undefined) { fields.push("plan = ?"); vals.push(plan); }
-    if (seat_limit !== undefined) { fields.push("seat_limit = ?"); vals.push(seat_limit); }
+    if (isSuperadmin && plan !== undefined) { fields.push("plan = ?"); vals.push(plan); }
+    if (isSuperadmin && seat_limit !== undefined) { fields.push("seat_limit = ?"); vals.push(seat_limit); }
     if (screenshot_retention_days !== undefined) { fields.push("screenshot_retention_days = ?"); vals.push(screenshot_retention_days); }
     if (screenshot_interval_min !== undefined) { fields.push("screenshot_interval_min = ?"); vals.push(screenshot_interval_min); }
     if (screenshot_interval_max !== undefined) { fields.push("screenshot_interval_max = ?"); vals.push(screenshot_interval_max); }
-    if (active !== undefined) { fields.push("active = ?"); vals.push(active); }
+    if (isSuperadmin && active !== undefined) { fields.push("active = ?"); vals.push(active); }
     if (fields.length) {
       vals.push(req.params.id);
       prepare(db, `UPDATE organisations SET ${fields.join(", ")} WHERE id = ?`).run(...vals);
