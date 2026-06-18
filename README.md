@@ -37,9 +37,6 @@ npm install
 npm start     # dev server on port 3000, proxies to 3001
 ```
 
-Login at http://localhost:3000/login
-- Superadmin: shaf@enovtec.com / changeme123
-
 ### 3. Agent (on a PC)
 
 ```bash

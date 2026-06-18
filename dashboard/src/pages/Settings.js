@@ -12,6 +12,10 @@ export default function Settings() {
   });
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [pwForm, setPwForm] = useState({ current: "", newPw: "", confirm: "" });
+  const [pwError, setPwError] = useState("");
+  const [pwSuccess, setPwSuccess] = useState(false);
+  const [pwSaving, setPwSaving] = useState(false);
 
   const save = async () => {
     setSaving(true);
@@ -22,6 +26,26 @@ export default function Settings() {
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
+  };
+
+  const changePassword = async () => {
+    setPwError(""); setPwSuccess(false);
+    if (!pwForm.current || !pwForm.newPw) return setPwError("Tamam fields bharein");
+    if (pwForm.newPw !== pwForm.confirm) return setPwError("Nayi passwords match nahi karti");
+    if (pwForm.newPw.length < 6) return setPwError("Password kam az kam 6 characters ka hona chahiye");
+    setPwSaving(true);
+    try {
+      const res = await authFetch(`/api/users/${user.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ password: pwForm.newPw })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setPwSuccess(true);
+      setPwForm({ current: "", newPw: "", confirm: "" });
+      setTimeout(() => setPwSuccess(false), 3000);
+    } catch (e) { setPwError(e.message); }
+    finally { setPwSaving(false); }
   };
 
   return (
@@ -63,6 +87,33 @@ export default function Settings() {
           <div style={styles.infoRow}><span style={styles.infoLabel}>Role</span><span style={styles.infoVal}>{user.role}</span></div>
           <div style={styles.infoRow}><span style={styles.infoLabel}>Organisation</span><span style={styles.infoVal}>{user.org_name}</span></div>
         </div>
+      </div>
+
+      <div style={styles.card}>
+        <h3 style={styles.section}>Change Password</h3>
+        <p style={styles.desc}>Apna account password tabdeel karein.</p>
+        <div style={styles.row}>
+          <div style={styles.field}>
+            <label style={styles.label}>Current Password</label>
+            <input style={styles.input} type="password" placeholder="••••••••" value={pwForm.current}
+              onChange={e => setPwForm({ ...pwForm, current: e.target.value })} />
+          </div>
+          <div style={styles.field}>
+            <label style={styles.label}>New Password</label>
+            <input style={styles.input} type="password" placeholder="••••••••" value={pwForm.newPw}
+              onChange={e => setPwForm({ ...pwForm, newPw: e.target.value })} />
+          </div>
+          <div style={styles.field}>
+            <label style={styles.label}>Confirm New Password</label>
+            <input style={styles.input} type="password" placeholder="••••••••" value={pwForm.confirm}
+              onChange={e => setPwForm({ ...pwForm, confirm: e.target.value })} />
+          </div>
+        </div>
+        {pwError && <div style={{ color: "#f87171", fontSize: 13, marginBottom: 12 }}>{pwError}</div>}
+        {pwSuccess && <div style={{ color: "#4ade80", fontSize: 13, marginBottom: 12 }}>✅ Password successfully change ho gaya!</div>}
+        <button onClick={changePassword} disabled={pwSaving} style={styles.saveBtn}>
+          🔒 {pwSuccess ? "Changed!" : pwSaving ? "Saving..." : "Update Password"}
+        </button>
       </div>
     </div>
   );
