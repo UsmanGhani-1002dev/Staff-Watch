@@ -51,10 +51,29 @@ export default function Machines() {
     load();
   };
 
-  const copy = (text, id) => {
-    navigator.clipboard.writeText(text);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
+  const copy = async (text, id) => {
+    try {
+      // navigator.clipboard only exists in secure contexts (HTTPS / localhost).
+      // On plain HTTP it's undefined, so fall back to the legacy execCommand.
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed";
+        ta.style.top = "-9999px";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch (e) {
+      setError("Could not copy — please select and copy manually");
+    }
   };
 
   const isOnline = (lastSeen) => lastSeen && (new Date() - new Date(lastSeen.replace(' ', 'T') + 'Z')) < 2 * 60 * 1000;
