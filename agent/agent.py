@@ -17,7 +17,14 @@ from io import BytesIO
 import requests
 
 # ── CONFIG ────────────────────────────────────────────────────────────────────
-CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
+# When frozen (PyInstaller), files live next to the .exe — not in the temp
+# extraction dir that __file__ points at. Use the exe's folder so config.json
+# persists between runs.
+if getattr(sys, "frozen", False):
+    BASE_DIR = os.path.dirname(sys.executable)
+else:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+CONFIG_FILE = os.path.join(BASE_DIR, "config.json")
 
 def normalize_server_url(url):
     """Clean up the server URL so we never double the /api path.
@@ -194,17 +201,24 @@ def run():
 
 # ── AUTO-START ─────────────────────────────────────────────────────────────────
 def install_to_startup():
+    """Register auto-start via the HKCU Run key instead of copying the .exe
+    into the Startup folder. A program copying itself into Startup is one of
+    the strongest antivirus heuristics; a Run key that points at the installed
+    exe is the standard, far less suspicious way to auto-start.
+    NOTE: the exe should live in a permanent folder before first run, since
+    the Run key points at its current location."""
     try:
-        if platform.system() == "Windows":
-            import shutil
-            # Only install to startup if running as compiled .exe
-            if getattr(sys, 'frozen', False):
-                exe_path = sys.executable
-                startup_dir = os.path.join(os.getenv('APPDATA'), 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup')
-                target_path = os.path.join(startup_dir, 'StaffWatchAgent.exe')
-                if exe_path != target_path:
-                    shutil.copyfile(exe_path, target_path)
-                    print(f"Installed to startup: {target_path}")
+        if platform.system() == "Windows" and getattr(sys, "frozen", False):
+            import winreg
+            exe_path = sys.executable
+            key = winreg.OpenKey(
+                winreg.HKEY_CURRENT_USER,
+                r"Software\Microsoft\Windows\CurrentVersion\Run",
+                0, winreg.KEY_SET_VALUE
+            )
+            winreg.SetValueEx(key, "StaffWatchAgent", 0, winreg.REG_SZ, f'"{exe_path}"')
+            winreg.CloseKey(key)
+            print(f"Registered auto-start: {exe_path}")
     except Exception as e:
         print(f"Startup install error: {e}")
 

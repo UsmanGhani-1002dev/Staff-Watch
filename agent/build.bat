@@ -4,7 +4,7 @@ pip install pyinstaller Pillow psutil requests
 
 echo.
 echo Compiling StaffWatch Agent to EXE...
-pyinstaller --noconsole --onefile --clean --name StaffWatchAgent agent.py
+pyinstaller --noconsole --onefile --clean --name StaffWatchAgent --version-file version.txt agent.py
 
 echo.
 echo ========================================================
